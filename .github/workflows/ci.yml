@@ -4,12 +4,6 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
-    inputs:
-      force_failure:
-        description: "Force a CI failure for the AlertOps demo"
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -36,12 +30,6 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -q
-
-      - name: Force demo failure
-        if: ${{ inputs.force_failure == true }}
-        run: |
-          echo "Intentional deployment validation failure for AlertOps demonstration"
-          exit 1
 
       - name: Send failure event to AlertOps
         if: ${{ failure() && env.ALERTOPS_INBOUND_URL != '' }}
