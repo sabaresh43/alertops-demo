@@ -2,7 +2,7 @@ name: Demo API CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -41,6 +41,7 @@ jobs:
             -d @- <<JSON
           {
             "source": "github-actions",
+            "sourceId": "${{ github.repository }}:${{ github.workflow }}",
             "status": "failure",
             "repository": "${{ github.repository }}",
             "workflow": "${{ github.workflow }}",
@@ -63,6 +64,7 @@ jobs:
             -d @- <<JSON
           {
             "source": "github-actions",
+            "sourceId": "${{ github.repository }}:${{ github.workflow }}",
             "status": "success",
             "repository": "${{ github.repository }}",
             "workflow": "${{ github.workflow }}",
@@ -73,4 +75,3 @@ jobs:
             "message": "GitHub Actions workflow recovered"
           }
           JSON
-
