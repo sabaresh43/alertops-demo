@@ -1,0 +1,76 @@
+name: Demo API CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      ALERTOPS_INBOUND_URL: ${{ secrets.ALERTOPS_INBOUND_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Send failure event to AlertOps
+        if: ${{ failure() && env.ALERTOPS_INBOUND_URL != '' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST "$ALERTOPS_INBOUND_URL" \
+            -H "Content-Type: application/json" \
+            -d @- <<JSON
+          {
+            "source": "github-actions",
+            "status": "failure",
+            "repository": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "runId": "${{ github.run_id }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "runUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "message": "GitHub Actions workflow failed"
+          }
+          JSON
+
+      - name: Send recovery event to AlertOps
+        if: ${{ success() && env.ALERTOPS_INBOUND_URL != '' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST "$ALERTOPS_INBOUND_URL" \
+            -H "Content-Type: application/json" \
+            -d @- <<JSON
+          {
+            "source": "github-actions",
+            "status": "success",
+            "repository": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "runId": "${{ github.run_id }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "runUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "message": "GitHub Actions workflow recovered"
+          }
+          JSON
+
